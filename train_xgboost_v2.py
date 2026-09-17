@@ -6,7 +6,8 @@ from category_encoders import TargetEncoder
 
 df = pd.read_csv("data/features.csv")
 
-BASE_FEATURES = ["cwe_graph_depth", "cwe_num_related", "code_length", "has_dangerous_pattern", "severity_encoded", "severity_known"]
+BASE_FEATURES = ["cwe_graph_depth", "cwe_num_related", "code_length", "has_dangerous_pattern",
+                  "severity_encoded", "severity_known"]
 TARGET = "risk_score"
 
 X_base = df[BASE_FEATURES]
@@ -30,7 +31,7 @@ for fold_num, (train_idx, val_idx) in enumerate(kfold.split(X_base), start=1):
     X_val = pd.concat([X_val_base.reset_index(drop=True),
                         cwe_encoded_val.reset_index(drop=True)], axis=1)
 
-    model = XGBRegressor(n_estimators=100, max_depth=4, random_state=42)
+    model = XGBRegressor(n_estimators=100, max_depth=4, random_state=42, objective="reg:absoluteerror")
     model.fit(X_train, y_train)
     preds = model.predict(X_val)
     mae = np.mean(np.abs(preds - y_val.values))
@@ -39,16 +40,15 @@ for fold_num, (train_idx, val_idx) in enumerate(kfold.split(X_base), start=1):
 
 fold_maes = np.array(fold_maes)
 print()
-print(f"Mean MAE (with CWE target encoding): {fold_maes.mean():.2f} (+/- {fold_maes.std():.2f})")
+print(f"Mean MAE (with CWE target encoding + severity, MAE-objective): {fold_maes.mean():.2f} (+/- {fold_maes.std():.2f})")
 
 baseline_mae = np.mean(np.abs(y - y.mean()))
 print(f"Naive baseline MAE: {baseline_mae:.2f}")
-print(f"Previous model (no CWE encoding) MAE: 12.91")
 
 full_encoder = TargetEncoder(cols=["cwe_id"])
 cwe_encoded_full = full_encoder.fit_transform(cwe, y)
 X_full = pd.concat([X_base.reset_index(drop=True), cwe_encoded_full.reset_index(drop=True)], axis=1)
-final_model = XGBRegressor(n_estimators=100, max_depth=4, random_state=42)
+final_model = XGBRegressor(n_estimators=100, max_depth=4, random_state=42, objective="reg:absoluteerror")
 final_model.fit(X_full, y)
 
 print()
