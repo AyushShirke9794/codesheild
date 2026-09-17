@@ -2,3 +2,5 @@ venv/
 __pycache__/
 *.pyc
 .env
+bandit_output.json
+semgrep_output.json
