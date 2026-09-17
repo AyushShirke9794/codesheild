@@ -48,6 +48,11 @@ def build_features():
         depth, num_related = cwe_graph_features(cwe_num, graph)
         vulnerable_code = row["vulnerable_code"] or ""
 
+        severity_raw = row["severity"]
+        severity_known = severity_raw is not None and str(severity_raw).upper() != "NAN"
+        severity_map = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
+        severity_encoded = severity_map.get(str(severity_raw).upper(), -1) if severity_known else -1
+
         records.append({
             "cve_id": row["cve_id"],
             "cwe_id": cwe_num,
@@ -55,6 +60,8 @@ def build_features():
             "cwe_num_related": num_related,
             "code_length": len(vulnerable_code.splitlines()),
             "has_dangerous_pattern": int(has_dangerous_pattern(vulnerable_code)),
+            "severity_encoded": severity_encoded,
+            "severity_known": int(severity_known),
             "risk_score": row["cvss3_base_score"] * 10,
         })
 
