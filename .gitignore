@@ -4,3 +4,4 @@ __pycache__/
 .env
 bandit_output.json
 semgrep_output.json
+data/
