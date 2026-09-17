@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from models import AnalyzeRequest, AnalyzeResponse
+from scanner import run_analysis
 
 app = FastAPI(title="CodeShield-X")
 
@@ -6,7 +8,15 @@ app = FastAPI(title="CodeShield-X")
 def health_check():
     return {"status": "ok"}
 
-@app.post("/analyze")
-def analyze_code():
-    # placeholder - Phase 2 will make this actually run Semgrep/Bandit
-    return {"status": "not_implemented_yet"}
+@app.post("/analyze", response_model=AnalyzeResponse)
+def analyze_code(request: AnalyzeRequest):
+    findings = run_analysis(request.code, request.filename)
+
+    high_severity_labels = {"HIGH", "ERROR", "CRITICAL"}
+    has_high = any(f.severity_raw.upper() in high_severity_labels for f in findings)
+
+    return AnalyzeResponse(
+        findings=findings,
+        total_findings=len(findings),
+        has_high_severity=has_high
+    )

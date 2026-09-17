@@ -10,3 +10,13 @@ class Finding(BaseModel):
     message: str
     file_path: str
     line_number: int
+
+class AnalyzeRequest(BaseModel):
+    code: str
+    filename: str = "submitted_code.py"
+
+
+class AnalyzeResponse(BaseModel):
+    findings: list[Finding]
+    total_findings: int
+    has_high_severity: bool
