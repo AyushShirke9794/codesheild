@@ -3,9 +3,21 @@ import networkx as nx
 import pandas as pd
 import re
 
+
 DANGEROUS_PATTERNS = [
+    # Command / code injection
     r"eval\(", r"exec\(", r"os\.system\(", r"subprocess\.",
-    r"pickle\.loads\(", r"shell=True", r"\.execute\(.*\+", r"%s.*%.*execute"
+    r"pickle\.loads\(", r"shell=True",
+    # SQL injection
+    r"\.execute\(.*\+", r"%s.*%.*execute",
+    # XSS (CWE-79 - your dataset's most common CWE)
+    r"render_template_string\(", r"mark_safe\(", r"\|safe\b", r"innerHTML",
+    # Path traversal (CWE-22 - second most common)
+    r"os\.path\.join\(.*request", r"open\(.*request\.",
+    # XXE (CWE-611 - present in your dataset)
+    r"resolve_entities\s*=\s*True", r"etree\.parse\((?!.*resolve_entities=False)",
+    # Open redirect (CWE-601)
+    r"redirect\(.*request\.(GET|args|params)",
 ]
 
 def has_dangerous_pattern(code: str) -> bool:
