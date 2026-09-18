@@ -1,3 +1,5 @@
+import os
+import joblib
 import pandas as pd
 from xgboost import XGBRegressor
 from sklearn.model_selection import cross_val_score, KFold
@@ -34,3 +36,14 @@ print()
 print("Feature importances (trained on full data):")
 for feat, imp in sorted(importances.items(), key=lambda x: -x[1]):
     print(f"  {feat}: {imp:.3f}")
+print()
+print("Saving production model artifacts...")
+
+os.makedirs("models", exist_ok=True)
+
+final_model.save_model("models/xgboost_risk_model.json")
+joblib.dump(full_encoder, "models/cwe_target_encoder.joblib")
+
+print("Saved:")
+print("  models/xgboost_risk_model.json")
+print("  models/cwe_target_encoder.joblib")
