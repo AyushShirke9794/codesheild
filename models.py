@@ -35,4 +35,20 @@ class RemediationResponse(BaseModel):
     cwe_id: Optional[int]
     explanation: str
     secure_fix: str
-    fixed_code: str    
+    fixed_code: str
+
+class VerificationRequest(BaseModel):
+    original_code: str
+    fixed_code: str
+    original_finding: Finding
+    filename: str = "submitted_code.py"
+
+
+class VerificationResponse(BaseModel):
+    verified: bool
+    original_vulnerability_fixed: bool
+    regression_detected: bool
+    original_finding: Finding
+    remaining_findings: list[Finding]
+    new_findings: list[Finding]
+    status: str

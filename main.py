@@ -4,20 +4,23 @@ from models import (
     AnalyzeRequest,
     AnalyzeResponse,
     RemediationRequest,
-    RemediationResponse
+    RemediationResponse,
+    VerificationRequest,
+    VerificationResponse
 )
 
 from scanner import run_analysis
 from finding_features import extract_features
 from risk_engine import RiskEngine
 from remediation_engine import RemediationEngine
+from verification_engine import VerificationEngine
 
 
 app = FastAPI(title="CodeShield-X")
 
-
 risk_engine = RiskEngine()
 remediation_engine = RemediationEngine()
+verification_engine = VerificationEngine()
 
 
 @app.get("/health")
@@ -27,14 +30,12 @@ def health_check():
 
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze_code(request: AnalyzeRequest):
-
     findings = run_analysis(
         request.code,
         request.filename
     )
 
     for finding in findings:
-
         try:
             features = extract_features(
                 finding,
@@ -76,7 +77,6 @@ def analyze_code(request: AnalyzeRequest):
     response_model=RemediationResponse
 )
 def remediate_code(request: RemediationRequest):
-
     result = remediation_engine.generate_fix(
         code=request.code,
         finding=request.finding
@@ -88,4 +88,21 @@ def remediate_code(request: RemediationRequest):
         explanation=result["explanation"],
         secure_fix=result["secure_fix"],
         fixed_code=result["fixed_code"]
+    )
+
+
+@app.post(
+    "/verify",
+    response_model=VerificationResponse
+)
+def verify_code(request: VerificationRequest):
+    result = verification_engine.verify(
+        original_code=request.original_code,
+        fixed_code=request.fixed_code,
+        original_finding=request.original_finding,
+        filename=request.filename
+    )
+
+    return VerificationResponse(
+        **result
     )

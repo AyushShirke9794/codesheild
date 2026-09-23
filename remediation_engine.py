@@ -1,7 +1,9 @@
 import os
 import json
+
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 
 from models import Finding
 
@@ -19,7 +21,21 @@ class RemediationEngine:
                 "GEMINI_API_KEY not found in environment."
             )
 
-        self.client = genai.Client(api_key=api_key)
+        http_options = types.HttpOptions(
+            timeout=60000,
+            retry_options=types.HttpRetryOptions(
+                attempts=3,
+                initial_delay=1.0,
+                max_delay=5.0,
+                http_status_codes=[500, 502, 503, 504],
+            ),
+        )
+
+        self.client = genai.Client(
+            api_key=api_key,
+            http_options=http_options
+        )
+
         self.model = "gemini-3.6-flash"
 
     def generate_fix(self, code: str, finding: Finding):
@@ -60,30 +76,53 @@ class RemediationEngine:
 
         prompt = "\n".join(prompt_parts)
 
-        # Use Google's current Interactions API
-        interaction = self.client.interactions.create(
-            model=self.model,
-            input=prompt
-        )
+        try:
+            interaction = self.client.interactions.create(
+                model=self.model,
+                input=prompt
+            )
+
+        except Exception as e:
+            error_text = str(e)
+
+            if "429" in error_text:
+                raise RuntimeError(
+                    "Gemini API quota exhausted (HTTP 429). "
+                    "Remediation is temporarily unavailable. "
+                    "Try again after the quota resets."
+                ) from e
+
+            if "503" in error_text:
+                raise RuntimeError(
+                    "Gemini service temporarily unavailable (HTTP 503) "
+                    "after the configured retries."
+                ) from e
+
+            raise RuntimeError(
+                f"Gemini remediation request failed: {e}"
+            ) from e
 
         text = interaction.output_text.strip()
 
-        # Remove Markdown code fences if Gemini adds them
+        if not text:
+            raise RuntimeError(
+                "Gemini returned an empty response."
+            )
+
+        # Remove Markdown code fences if Gemini adds them.
         if text.startswith("```"):
             text = text.replace("```json", "")
             text = text.replace("```", "")
             text = text.strip()
 
-        # Parse Gemini's JSON response
         try:
             result = json.loads(text)
 
         except json.JSONDecodeError as e:
             raise RuntimeError(
                 f"Gemini returned invalid JSON: {e}"
-            )
+            ) from e
 
-        # Validate required response fields
         required_fields = {
             "explanation",
             "secure_fix",
@@ -91,8 +130,10 @@ class RemediationEngine:
         }
 
         if not required_fields.issubset(result):
+            missing = required_fields - set(result.keys())
+
             raise RuntimeError(
-                "Gemini response missing required fields."
+                f"Gemini response missing required fields: {missing}"
             )
 
         return result
