@@ -100,7 +100,8 @@ def verify_code(request: VerificationRequest):
         original_code=request.original_code,
         fixed_code=request.fixed_code,
         original_finding=request.original_finding,
-        filename=request.filename
+        filename=request.filename,
+        functional_tests=request.functional_tests
     )
 
     return VerificationResponse(
