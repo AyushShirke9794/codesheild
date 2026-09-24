@@ -6,7 +6,9 @@ from models import (
     RemediationRequest,
     RemediationResponse,
     VerificationRequest,
-    VerificationResponse
+    VerificationResponse,
+    TrustGateRequest,
+    TrustGateResponse
 )
 
 from scanner import run_analysis
@@ -14,6 +16,7 @@ from finding_features import extract_features
 from risk_engine import RiskEngine
 from remediation_engine import RemediationEngine
 from verification_engine import VerificationEngine
+from trustgate import evaluate_trust_gate
 
 
 app = FastAPI(title="CodeShield-X")
@@ -107,3 +110,11 @@ def verify_code(request: VerificationRequest):
     return VerificationResponse(
         **result
     )
+
+
+@app.post(
+    "/trust-gate",
+    response_model=TrustGateResponse
+)
+def trust_gate(request: TrustGateRequest):
+    return evaluate_trust_gate(request)
