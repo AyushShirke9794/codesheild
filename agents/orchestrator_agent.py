@@ -1,3 +1,4 @@
+
 from typing import Any, Dict
 
 from agents.base_agent import BaseAgent
@@ -203,11 +204,32 @@ class OrchestratorAgent(BaseAgent):
                 if verification_data["verified"]:
                     break
 
-                # Failed verification: re-analyze the failed fix so the
-                # next attempt targets an accurate, up-to-date finding
-                # instead of stale line numbers from before this fix.
+                # Failed verification: only re-analyze if another
+                # remediation attempt is available.
+                if attempt >= max_attempts:
+                    return AgentResult(
+                        agent_name=self.name,
+                        success=True,
+                        data={
+                            "analysis": analysis,
+                            "risk": risk,
+                            "selected_finding": current_finding,
+                            "remediation_history": remediation_history,
+                            "verification_history": verification_history,
+                            "reanalysis_history": reanalysis_history,
+                        },
+                        message=(
+                            "Remediation loop exhausted: "
+                            "maximum attempts reached without "
+                            "successful verification."
+                        )
+                    ).__dict__
+
                 current_code = fixed_code
 
+                # Re-analyze the failed fix so the next attempt
+                # targets an accurate, up-to-date finding instead
+                # of stale metadata from before the fix.
                 reanalysis = self.analysis_agent.run({
                     "code": current_code,
                     "filename": filename,
@@ -297,8 +319,10 @@ class OrchestratorAgent(BaseAgent):
                     )
                 )
 
+            # This branch is retained as a defensive fallback.
+            # Normal exhaustion is handled by the explicit return
+            # inside the failed-verification path above.
             else:
-                # Maximum remediation attempts were exhausted.
                 return AgentResult(
                     agent_name=self.name,
                     success=True,
@@ -366,4 +390,3 @@ class OrchestratorAgent(BaseAgent):
                 success=False,
                 message=f"Orchestration failed: {e}"
             )
-            return result.__dict__
