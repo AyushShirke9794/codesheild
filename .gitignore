@@ -5,3 +5,10 @@ __pycache__/
 bandit_output.json
 semgrep_output.json
 data/
+
+# DeVAIC test artifacts
+devaic_test_output.json
+devaic_scanner_test.py
+test_source.py
+scanner_backup.py
+test_gemini.py
